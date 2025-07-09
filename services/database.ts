@@ -145,7 +145,12 @@ export const getAllReceiptsFromDatabase = async (): Promise<Receipt[]> => {
           category: receipt.category,
           items: items,
           createdAt: receipt.created_at,
-          updatedAt: receipt.updated_at
+          updatedAt: receipt.updated_at,
+          // Add legacy fields for UI compatibility
+          tax: receipt.tax_amount,
+          subtotal: Math.max(0, receipt.total_amount - (receipt.tax_amount || 0)),
+          total: receipt.total_amount,
+          store: receipt.merchant_name,
         };
       });
     }
@@ -257,7 +262,12 @@ export const getReceiptById = async (id: string): Promise<Receipt | null> => {
         category: receipt.category,
         items: items,
         createdAt: receipt.created_at,
-        updatedAt: receipt.updated_at
+        updatedAt: receipt.updated_at,
+        // Add legacy fields for UI compatibility
+        tax: receipt.tax_amount,
+        subtotal: Math.max(0, receipt.total_amount - (receipt.tax_amount || 0)),
+        total: receipt.total_amount,
+        store: receipt.merchant_name,
       };
     }
   } catch (error) {

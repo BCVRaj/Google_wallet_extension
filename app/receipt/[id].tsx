@@ -138,11 +138,11 @@ export default function ReceiptDetailScreen() {
               <View style={styles.totalsSection}>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Subtotal</Text>
-                  <Text style={styles.totalValue}>${(receipt.subtotal || 0).toFixed(2)}</Text>
+                  <Text style={styles.totalValue}>${((receipt.totalAmount || 0) - (receipt.taxAmount || 0)).toFixed(2)}</Text>
                 </View>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Tax</Text>
-                  <Text style={styles.totalValue}>${(receipt.tax || 0).toFixed(2)}</Text>
+                  <Text style={styles.totalValue}>${(receipt.taxAmount || 0).toFixed(2)}</Text>
                 </View>
                 <View style={[styles.totalRow, styles.finalTotalRow]}>
                   <Text style={styles.finalTotalLabel}>Total</Text>

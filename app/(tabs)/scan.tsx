@@ -8,10 +8,12 @@ import {
   Alert,
   SafeAreaView,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CheckCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useReceiptStore } from '../../store/receiptStore';
 import { Colors } from '../../constants/Colors';
@@ -24,6 +26,9 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successReceiptData, setSuccessReceiptData] = useState<Receipt | null>(null);
+  const [hasExtractedData, setHasExtractedData] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const { addReceipt } = useReceiptStore();
 
@@ -93,29 +98,12 @@ export default function ScanScreen() {
       const receiptData = await processReceiptImage(imageUri);
       await addReceipt(receiptData);
       
-      // Show success message with different options based on OCR success
+      // Show success modal with different options based on OCR success
       const hasExtractedData = receiptData.merchantName !== 'Unknown Store';
       
-      Alert.alert(
-        hasExtractedData ? 'Receipt Processed!' : 'Receipt Captured!',
-        hasExtractedData 
-          ? 'AI has extracted your receipt data! Review and edit if needed.'
-          : 'Receipt saved. Please add the details manually.',
-        [
-          {
-            text: 'Edit Receipt',
-            onPress: () => router.push(`/receipt/edit/${receiptData.id}`),
-          },
-          {
-            text: 'View Receipt',
-            onPress: () => router.push(`/receipt/${receiptData.id}`),
-          },
-          {
-            text: 'Scan Another',
-            style: 'cancel',
-          },
-        ]
-      );
+      setSuccessReceiptData(receiptData);
+      setHasExtractedData(hasExtractedData);
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('Error processing receipt:', error);
       Alert.alert(
@@ -308,6 +296,67 @@ export default function ScanScreen() {
           </View>
         </LinearGradient>
       </CameraView>
+      
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Checkmark Icon */}
+            <View style={styles.checkmarkContainer}>
+              <CheckCircle size={48} color="#fff" />
+            </View>
+            
+            {/* Title */}
+            <Text style={styles.modalTitle}>
+              {hasExtractedData ? 'Receipt Processed!' : 'Receipt Captured!'}
+            </Text>
+            
+            {/* Subtitle */}
+            <Text style={styles.modalSubtitle}>
+              {hasExtractedData 
+                ? 'AI has extracted your receipt data! Review and edit if needed.'
+                : 'Receipt saved. Please add the details manually.'}
+            </Text>
+            
+            {/* Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.editButton]}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  router.push(`/receipt/edit/${successReceiptData?.id}`);
+                }}
+              >
+                <Text style={styles.editButtonText}>Edit Receipt</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.viewButton]}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  router.push(`/receipt/${successReceiptData?.id}`);
+                }}
+              >
+                <Text style={styles.viewButtonText}>View Receipt</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.scanButton]}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                }}
+              >
+                <Text style={styles.scanButtonText}>Scan Another</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -505,6 +554,93 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 400,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 20,
+      },
+    }),
+  },
+  checkmarkContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  modalButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  modalButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: '100%',
+  },
+  editButton: {
+    backgroundColor: Colors.primary,
+  },
+  viewButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  scanButton: {
+    backgroundColor: 'transparent',
+  },
+  editButtonText: {
+    color: Colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  viewButtonText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scanButtonText: {
+    color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },
